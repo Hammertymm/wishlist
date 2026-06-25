@@ -58,6 +58,7 @@
 
     .add-form input,
     .add-form select,
+    .add-form textarea,
     .add-form button {
       font-size: 1rem;
       padding: 12px;
@@ -67,10 +68,49 @@
       color: var(--ink);
     }
 
-    .add-form button {
+    .add-form textarea {
+      font-family: inherit;
+      resize: vertical;   /* let the user drag it taller, not wider */
+    }
+
+    /* The collapsible "More details" section. */
+    .more {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 0 12px;
+    }
+    .more summary {
+      cursor: pointer;
+      padding: 12px 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+      user-select: none;
+    }
+    /* Stack the optional fields with a little breathing room when open. */
+    .more[open] { padding-bottom: 12px; }
+    .more textarea,
+    .more input {
+      width: 100%;
+      margin-top: 8px;
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 8px;
+    }
+    .form-actions button { flex: 1; }
+
+    .add-form button[type="submit"] {
       background: var(--accent);
       color: #fff;
       border: none;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    /* The Cancel button is a quieter, secondary style. */
+    #cancel-edit {
+      background: #fff;
+      color: var(--muted);
       font-weight: 600;
       cursor: pointer;
     }
@@ -135,7 +175,7 @@
       border-radius: 12px;
       padding: 12px;
       display: flex;
-      align-items: center;
+      align-items: flex-start;  /* top-align now that items can be multi-line */
       gap: 10px;
     }
 
@@ -144,12 +184,26 @@
       width: 22px;
       height: 22px;
       flex: none;
+      margin-top: 2px;          /* nudge to line up with the first text line */
       cursor: pointer;
       accent-color: var(--accent);
     }
 
-    .item .title {
+    /* The middle column: badge + title on top, optional details below. */
+    .item .body {
       flex: 1;
+      min-width: 0;             /* lets long text wrap instead of overflowing */
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .item .title-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .item .title {
       font-weight: 500;
       word-break: break-word;
     }
@@ -157,6 +211,36 @@
     li.item.done .title {
       color: var(--muted);
       text-decoration: line-through;
+    }
+
+    /* Phase 4: the optional note / link / location lines. */
+    .item .meta {
+      font-size: 0.85rem;
+      color: var(--muted);
+      word-break: break-word;
+    }
+    .item .meta.note { white-space: pre-wrap; }  /* keep line breaks in notes */
+    .item .meta.location::before { content: "📍 "; }
+    .item .meta a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    .item .meta a:hover { text-decoration: underline; }
+
+    /* The edit + delete buttons sit together on the right. */
+    .item .actions {
+      flex: none;
+      display: flex;
+      align-items: center;
+    }
+    .edit {
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-size: 1.1rem;
+      line-height: 1;
+      cursor: pointer;
+      padding: 4px 6px;
     }
 
     /* The little category label */
@@ -198,7 +282,7 @@
       <p>Everything you want to do, buy, read, watch, hear, eat and experience.</p>
     </header>
 
-    <!-- Phase 1: the add form. -->
+    <!-- Phase 1: the add form. Phase 4 adds the optional fields below. -->
     <form class="add-form" id="add-form">
       <input
         type="text"
@@ -210,7 +294,39 @@
       <select id="category-input">
         <!-- The 8 fixed categories get filled in by JavaScript below. -->
       </select>
-      <button type="submit">Add to list</button>
+
+      <!--
+        Phase 4: the optional extras live inside <details>, a built-in HTML
+        element that hides/reveals its contents when you tap the summary.
+        Keeping them collapsed means adding a quick item stays a 2-second job
+        (title + category), while the extras are one tap away when you want them.
+      -->
+      <details id="more-details" class="more">
+        <summary>More details (optional)</summary>
+        <textarea
+          id="note-input"
+          rows="2"
+          placeholder="Note — why do you want this?"
+        ></textarea>
+        <input
+          type="text"
+          id="link-input"
+          placeholder="Link (e.g. a website)"
+          autocomplete="off"
+        />
+        <input
+          type="text"
+          id="location-input"
+          placeholder="Location (e.g. Lisbon)"
+          autocomplete="off"
+        />
+      </details>
+
+      <div class="form-actions">
+        <button type="submit" id="submit-btn">Add to list</button>
+        <!-- Only shown while editing, so you can back out without saving. -->
+        <button type="button" id="cancel-edit" hidden>Cancel</button>
+      </div>
     </form>
 
     <!-- Phase 2: switch between things still to do (Active) and things done (Done). -->
@@ -235,7 +351,8 @@
   <script>
     // ====== Data shape ======
     // Each item looks like:
-    //   { id, title, category, dateAdded, done }
+    //   { id, title, category, note, link, location, dateAdded, done }
+    // note/link/location are optional (empty string when not given).
     // 'done' is false when added; ticking the checkbox flips it to true.
 
     // The 8 fixed categories (the "verbs"). Order = how they appear in the picker.
@@ -246,6 +363,9 @@
 
     // Which tab we're looking at: "active" (not done) or "done" (completed).
     let currentView = "active";
+
+    // When we're editing an existing item, this holds its id. null = adding new.
+    let editingId = null;
 
     // ====== Load saved items (or start empty) ======
     let items = loadItems();
@@ -273,6 +393,14 @@
     const tabDone = document.getElementById("tab-done");
     const searchInput = document.getElementById("search-input");
     const filterCategory = document.getElementById("filter-category");
+    // Phase 4: the optional fields, plus the submit/cancel buttons and the
+    // collapsible "More details" wrapper (so we can open it when editing).
+    const noteInput = document.getElementById("note-input");
+    const linkInput = document.getElementById("link-input");
+    const locationInput = document.getElementById("location-input");
+    const submitBtn = document.getElementById("submit-btn");
+    const cancelBtn = document.getElementById("cancel-edit");
+    const moreDetails = document.getElementById("more-details");
 
     // Fill the category picker (add form) from the CATEGORIES list above.
     for (const cat of CATEGORIES) {
@@ -304,30 +432,91 @@
       render();
     });
 
-    // ====== Adding an item ======
+    // ====== Adding OR editing an item ======
+    // One form does both jobs. If editingId is set we update that item;
+    // otherwise we create a new one. The optional fields are read either way.
     form.addEventListener("submit", function (event) {
       event.preventDefault(); // stop the page from reloading
 
       const title = titleInput.value.trim();
       if (!title) return; // ignore empty titles
 
-      const newItem = {
-        id: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random())),
-        title: title,
-        category: categoryInput.value,
-        dateAdded: new Date().toISOString(),
-        done: false,
-      };
+      // Read the optional fields, trimmed. Empty string means "not given".
+      const note = noteInput.value.trim();
+      const link = linkInput.value.trim();
+      const location = locationInput.value.trim();
 
-      items.push(newItem);
+      if (editingId) {
+        // --- Editing: find the item and overwrite its editable fields. ---
+        // We keep its id, dateAdded and done flag untouched.
+        const item = items.find(function (i) { return i.id === editingId; });
+        if (item) {
+          item.title = title;
+          item.category = categoryInput.value;
+          item.note = note;
+          item.link = link;
+          item.location = location;
+        }
+      } else {
+        // --- Adding: build a brand-new item. ---
+        const newItem = {
+          id: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random())),
+          title: title,
+          category: categoryInput.value,
+          note: note,
+          link: link,
+          location: location,
+          dateAdded: new Date().toISOString(),
+          done: false,
+        };
+        items.push(newItem);
+        // New items are always active, so jump to the Active tab to see it.
+        currentView = "active";
+      }
+
       saveItems();
-
-      // New items are always active, so make sure we're on the Active tab to see it.
-      currentView = "active";
+      resetForm();      // clears the fields and leaves "edit mode" if we were in it
       render();
+      titleInput.focus();
+    });
 
-      // Reset the form for the next quick entry.
-      titleInput.value = "";
+    // ====== Starting an edit ======
+    // Loads an existing item back into the form so any field can be changed.
+    function startEdit(id) {
+      const item = items.find(function (i) { return i.id === id; });
+      if (!item) return;
+
+      editingId = id;
+      titleInput.value = item.title;
+      categoryInput.value = item.category;
+      noteInput.value = item.note || "";
+      linkInput.value = item.link || "";
+      locationInput.value = item.location || "";
+
+      // Open the "More details" section so the optional fields are visible,
+      // swap the button to "Save changes", and reveal Cancel.
+      moreDetails.open = true;
+      submitBtn.textContent = "Save changes";
+      cancelBtn.hidden = false;
+
+      // Bring the form into view and put the cursor in the title.
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      titleInput.focus();
+    }
+
+    // ====== Clearing the form / leaving edit mode ======
+    function resetForm() {
+      editingId = null;
+      form.reset();              // empties title, note, link, location
+      categoryInput.value = CATEGORIES[0];  // back to the first category
+      moreDetails.open = false;
+      submitBtn.textContent = "Add to list";
+      cancelBtn.hidden = true;
+    }
+
+    // The Cancel button backs out of an edit without saving.
+    cancelBtn.addEventListener("click", function () {
+      resetForm();
       titleInput.focus();
     });
 
@@ -345,8 +534,17 @@
       items = items.filter(function (item) {
         return item.id !== id;
       });
+      // If we were editing the item we just deleted, leave edit mode.
+      if (editingId === id) resetForm();
       saveItems();
       render();
+    }
+
+    // Make a typed link safe to use as an href. If the user didn't include a
+    // scheme (http:// or https://), assume https:// so "example.com" still works
+    // as a link to that site rather than a path on our own page.
+    function normalizeUrl(url) {
+      return /^https?:\/\//i.test(url) ? url : "https://" + url;
     }
 
     // ====== Drawing the list on screen ======
@@ -369,7 +567,12 @@
       const cat = filterCategory.value; // "ALL" or a specific category
       const visible = inView.filter(function (i) {
         const matchesCategory = (cat === "ALL") || (i.category === cat);
-        const matchesText = (term === "") || i.title.toLowerCase().includes(term);
+        // Search across title, note and location (whichever exist).
+        const haystack = [i.title, i.note, i.location]
+          .filter(Boolean)        // drop empty/missing fields
+          .join(" ")
+          .toLowerCase();
+        const matchesText = (term === "") || haystack.includes(term);
         return matchesCategory && matchesText;
       });
 
@@ -403,6 +606,13 @@
           toggleDone(item.id);
         });
 
+        // --- The middle column: badge + title on top, optional details below. ---
+        const body = document.createElement("div");
+        body.className = "body";
+
+        const titleRow = document.createElement("div");
+        titleRow.className = "title-row";
+
         const badge = document.createElement("span");
         badge.className = "badge";
         badge.textContent = item.category;
@@ -410,6 +620,52 @@
         const title = document.createElement("span");
         title.className = "title";
         title.textContent = item.title;
+
+        titleRow.appendChild(badge);
+        titleRow.appendChild(title);
+        body.appendChild(titleRow);
+
+        // Location line (only if present).
+        if (item.location) {
+          const loc = document.createElement("div");
+          loc.className = "meta location";
+          loc.textContent = item.location;
+          body.appendChild(loc);
+        }
+
+        // Note line (only if present). pre-wrap CSS keeps any line breaks.
+        if (item.note) {
+          const note = document.createElement("div");
+          note.className = "meta note";
+          note.textContent = item.note;
+          body.appendChild(note);
+        }
+
+        // Link line (only if present), shown as a real tappable link.
+        if (item.link) {
+          const linkWrap = document.createElement("div");
+          linkWrap.className = "meta";
+          const a = document.createElement("a");
+          a.textContent = item.link;
+          a.href = normalizeUrl(item.link);
+          a.target = "_blank";        // open in a new tab
+          a.rel = "noopener noreferrer";
+          linkWrap.appendChild(a);
+          body.appendChild(linkWrap);
+        }
+
+        // --- The edit + delete buttons, grouped on the right. ---
+        const actions = document.createElement("div");
+        actions.className = "actions";
+
+        const edit = document.createElement("button");
+        edit.className = "edit";
+        edit.type = "button";
+        edit.textContent = "✏️";
+        edit.setAttribute("aria-label", "Edit " + item.title);
+        edit.addEventListener("click", function () {
+          startEdit(item.id);
+        });
 
         const del = document.createElement("button");
         del.className = "delete";
@@ -420,10 +676,12 @@
           deleteItem(item.id);
         });
 
+        actions.appendChild(edit);
+        actions.appendChild(del);
+
         li.appendChild(check);
-        li.appendChild(badge);
-        li.appendChild(title);
-        li.appendChild(del);
+        li.appendChild(body);
+        li.appendChild(actions);
         list.appendChild(li);
       }
     }
