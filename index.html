@@ -5,6 +5,19 @@
   <!-- This line is what makes the page behave properly on a phone screen. -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Wishlist</title>
+
+  <!--
+    PWA bits — these turn the page into an installable app ("Add to Home
+    Screen") with an icon, and let the service worker provide offline support.
+  -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#2f6f4f" />
+  <link rel="icon" href="icon-192.png" />
+  <!-- iOS-specific: app icon + standalone (no Safari chrome) when launched from the Home Screen. -->
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Wishlist" />
   <style>
     /* ---- Basic look. Mobile-first: designed for a narrow phone screen. ---- */
     :root {
@@ -1116,6 +1129,16 @@ Reykjavik"></textarea>
 
     // Draw the list once when the page first loads.
     render();
+
+    // ====== Register the service worker (offline + installable) ======
+    // Wrapped in a feature check so it simply does nothing on old browsers.
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", function () {
+        navigator.serviceWorker.register("sw.js").catch(function () {
+          // If registration fails the app still works — just no offline support.
+        });
+      });
+    }
   </script>
 </body>
 </html>
