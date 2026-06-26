@@ -500,7 +500,7 @@ Reykjavik"></textarea>
     const CATEGORIES = ["Buy", "Go", "Read", "Watch", "Listen", "Consume", "Experience", "Other"];
 
     // The name of the "box" the browser keeps our data in, on this device.
-    const STORAGE_KEY = "wishlist.items";
+    const STORAGE_KEY = "muzdoo.items";
 
     // Which tab we're looking at: "active" (not done) or "done" (completed).
     let currentView = "active";
@@ -531,7 +531,7 @@ Reykjavik"></textarea>
     // We keep one "store" called "photos"; the key is the item's id and the
     // value is the image Blob. These helpers wrap IndexedDB's old-style
     // callback API in Promises so we can use clean async/await below.
-    const DB_NAME = "wishlist";
+    const DB_NAME = "muzdoo";
     const PHOTO_STORE = "photos";
     let dbPromise = null;
 

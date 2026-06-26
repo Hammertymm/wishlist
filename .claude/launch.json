@@ -2,7 +2,7 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "wishlist",
+      "name": "muzdoo",
       "runtimeExecutable": "npx",
       "runtimeArgs": ["serve", "-p", "5600", "."],
       "port": 5600

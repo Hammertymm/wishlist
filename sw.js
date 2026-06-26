@@ -5,7 +5,7 @@
 // (and refresh the cache), so you never get stuck on a stale app after an
 // update. When offline, we serve the last cached copy. Bump CACHE when the
 // list of files changes to clear out the old cache.
-const CACHE = "wishlist-v1";
+const CACHE = "muzdoo-v1";
 const ASSETS = [
   "./",
   "./index.html",
