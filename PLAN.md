@@ -1,4 +1,4 @@
-# Build Plan — Wishlist *(working title)*
+# Build Plan — Muzdoo
 
 > The execution order for [PRD.md](./PRD.md). The PRD says **what** and **why**;
 > this says **in what order** and **how you'll know each step works**.
@@ -45,7 +45,7 @@ that's the whole point of slicing it this way.
 
 **Goal:** Add an item, see it in a list, and have it still be there after you close and reopen the app.
 
-**You can now…** actually use a basic wishlist. This is the smallest *real* version.
+**You can now…** actually use a basic Muzdoo list. This is the smallest *real* version.
 
 **Build:**
 - The 8 fixed categories baked in: **Buy · Go · Read · Watch · Listen · Consume · Experience · Other**.

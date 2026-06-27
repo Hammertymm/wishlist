@@ -1,4 +1,4 @@
-# PRD — Wishlist *(working title)*
+# PRD — Muzdoo
 
 > A personal, phone-friendly wishlist / bucket-list app for capturing everything you want
 > to do, buy, read, watch, hear, eat, and experience — and checking it off when you do.
@@ -125,7 +125,7 @@ Explicitly **not** in v1 (deliberately deferred to keep the project finishable):
 - **User accounts / authentication.**
 - **Custom / user-created categories**, tags, or favourites.
 - **File / CSV / spreadsheet import** and **per-row categories**. v1 import is paste-text-only with one category per batch; richer file import is a *maybe-later* upgrade.
-- **Link auto-fill / metadata scraping**, barcode scanning, share-sheet "Add to wishlist" from other apps.
+- **Link auto-fill / metadata scraping**, barcode scanning, share-sheet "Add to Muzdoo" from other apps.
 - **Reminders / nudges / notifications.**
 - A **memory-bank / review-and-rate** experience (this app is forward-looking wants, not a log of past experiences).
 
@@ -133,4 +133,4 @@ Explicitly **not** in v1 (deliberately deferred to keep the project finishable):
 
 - **v1 = "the weekend version":** add an item → see the active list → filter by category → search → check things off → see them in the Done view → reopen later and it's all still there. That is a complete, usable app. Resist adding to it until that loop works end-to-end.
 - **Natural growth path after v1:** (a) optional category-specific fields if "Other" gets overloaded or a field is genuinely missed; (b) **v2** cloud sync + multi-device, which also solves robust photo storage; (c) the location *text* field is intentionally a stepping-stone toward the **v2** distance-sort feature — the data it captures ("Lisbon") is exactly what a future geocoder would consume.
-- **Working title only:** "Wishlist" is a placeholder; rename the app and the project folder whenever a better name appears.
+- **App name:** Muzdoo.
